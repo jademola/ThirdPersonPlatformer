@@ -25,6 +25,7 @@ public class CoinController : MonoBehaviour
     {
         Debug.Log("Collision!!");
         if(triggeredObject.CompareTag("Player")) {
+            GameManager.Instance.IncrementScore();
             Destroy(this.gameObject);
         }
     }
