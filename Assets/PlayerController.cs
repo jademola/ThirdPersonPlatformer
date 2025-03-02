@@ -3,9 +3,10 @@ using UnityEngine;
 public class PlayerController : MonoBehaviour
 {
     [SerializeField] private float speed = 5f;
-    [SerializeField] private float jumpForce = 5f;
-    [SerializeField] private float turnSpeed = 15f;
-    [SerializeField] private float airControlFactor = 0.5f;
+    [SerializeField] private float jumpForce = 3f;
+    [SerializeField] private float dashDistance = 2f;
+    private float dashDelay = 3.0f;
+    float timeAtLastDash = 0;
     private CharacterController controller;
     private Vector3 playerVelocity;
     private int jumpsUsed = 0;
@@ -42,20 +43,32 @@ public class PlayerController : MonoBehaviour
 
         Vector3 moveDirection = (forward * vertical + right * horizontal).normalized;
 
-        float currentTurnSpeed = grounded ? turnSpeed : turnSpeed * 0.5f;
         if (moveDirection.magnitude > 0.1f) 
         {
             Quaternion targetRotation = Quaternion.LookRotation(moveDirection);
-            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * currentTurnSpeed);
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * 10f);
         }
 
-        float currentSpeed = grounded ? speed : speed * airControlFactor;
-        controller.Move(moveDirection * currentSpeed * Time.deltaTime);
+
+        controller.Move(moveDirection * speed * Time.deltaTime);
 
         if (Input.GetKeyDown(KeyCode.Space) && jumpsUsed < 2)
         {
             playerVelocity.y = Mathf.Sqrt(jumpForce * -2f * gravity);
             jumpsUsed++;
+        }
+
+        if (Input.GetKey(KeyCode.Q))
+        {
+            
+            // check if dash was used in last 3 seconds
+            if (Time.time >= timeAtLastDash)
+            {
+                
+                timeAtLastDash = Time.time + dashDelay;
+    
+                controller.Move(moveDirection  * dashDistance);
+            }
         }
         
 
