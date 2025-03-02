@@ -2,48 +2,70 @@ using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
-    [SerializeField] private InputManager inputManager;
-    [SerializeField] private float speed = 2f;
-    [SerializeField] private float drag1;
-    private Rigidbody playerRB;
-    bool grounded;
-    public LayerMask isGround;
-    public float playerHeight;
+    [SerializeField] private float speed = 5f;
+    [SerializeField] private float jumpForce = 5f;
+    private CharacterController controller;
+    private Vector3 playerVelocity;
+    private bool grounded;
+    private int jumpsUsed = 0;
+    public Transform cameraBody;
+    private float gravity = -9.8f;
 
     private void Start()
     {
-        // Get reference to player rigidbody
-        playerRB = GetComponent<Rigidbody>();
-
-        //Listen for horizontal movement
-        inputManager.OnMove.AddListener(MovePlayer);
-
-        //Listen for space bar to allow player to jump
-        inputManager.OnSpacePressed.AddListener(JumpPlayer);
-
-
+        // Get reference to CharacterController
+        controller = GetComponent<CharacterController>();
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
     }
 
     private void Update()
     {
-        grounded = Physics.Raycast(transform.position, Vector3.down, playerHeight * 0.5f +0.2f, isGround);
-
-        if (grounded)
+        grounded = controller.isGrounded;
+        
+        if (grounded && playerVelocity.y < 0)
         {
-            playerRB.linearDamping = drag1;
-        } else
-        {
-            playerRB.linearDamping = 0;
+            playerVelocity.y = 0f;
+            jumpsUsed = 0;
         }
+        // Convert input direction based on camera
+        float horizontal = Input.GetAxis("Horizontal");
+        float vertical = Input.GetAxis("Vertical");
+        Vector3 forward = cameraBody.forward;
+        Vector3 right = cameraBody.right;
+        forward.y = 0;
+        right.y = 0;
+        forward.Normalize();
+        right.Normalize();
+
+        Vector3 moveDirection = (forward * vertical + right * horizontal).normalized;
+
+        if (moveDirection.magnitude > 0.1f) 
+        {
+            Quaternion targetRotation = Quaternion.LookRotation(moveDirection);
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * 10f);
+        }
+
+        controller.Move(moveDirection * speed * Time.deltaTime);
+
+        if (Input.GetKeyDown(KeyCode.Space) && jumpsUsed < 2)
+        {
+            playerVelocity.y = Mathf.Sqrt(jumpForce * -2f * gravity);
+            jumpsUsed++;
+        }
+        
+
+        if (!grounded)
+        {
+            playerVelocity.y += gravity * Time.deltaTime;
+        }
+        controller.Move(playerVelocity * Time.deltaTime);
     }
 
-    private void MovePlayer(Vector2 direction) {
-        Vector3 moveDirection = new(direction.x, 0f, direction.y);
-        playerRB.AddForce(speed * moveDirection);
+    [SerializeField] private float groundCheckDistance = 0.2f;
+    private bool IsGrounded()
+    {
+        return Physics.Raycast(transform.position, Vector3.down, groundCheckDistance);
     }
 
-    private void JumpPlayer() {
-        Vector3 jumpVector = new Vector3(0, 10f, 0);
-        playerRB.AddForce(jumpVector, ForceMode.Impulse);
-    }
 }
